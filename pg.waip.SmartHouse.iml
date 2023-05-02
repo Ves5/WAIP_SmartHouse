@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <output url="file://$MODULE_DIR$/cls" />
+    <output-test url="file://$MODULE_DIR$/out/test/pg.waip.SmartHouse" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="coreapi" level="project" />
+    <orderEntry type="library" name="corba_sun" level="project" />
+    <orderEntry type="library" name="utilityapi" level="project" />
+    <orderEntry type="library" name="tools_cls" level="project" />
+  </component>
+</module>

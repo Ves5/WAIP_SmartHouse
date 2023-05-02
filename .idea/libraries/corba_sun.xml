@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="corba_sun">
+    <CLASSES>
+      <root url="jar://C:/Program Files (x86)/Ericsson/Network Resource Gateway SDK/R5A02/lib/corba/sun/lib/corba_sun.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
