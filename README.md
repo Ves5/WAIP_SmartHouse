@@ -8,7 +8,7 @@ Inside simulator:
 Command tested on just Configuration NestedProperties, may require further adjustments.
 
 ## Build
-Build only with the `build.bat`, it may or may not require you to change path to simulator in `sim_path` variable. 
+Build only with the `build.bat`, it may or may not require you to change path to simulator in `sim_path` variable or the javac path. 
 
 **Please don't commit changed build.bat**
 
