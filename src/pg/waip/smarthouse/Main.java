@@ -1,12 +1,12 @@
 package pg.waip.smarthouse;
 
-import java.awt.event.ActionEvent;
+import com.ericsson.hosasdk.api.HOSAMonitor;
+import com.ericsson.hosasdk.utility.framework.FWproxy;
+import com.ericsson.nrgsdk.examples.tools.SDKToolkit;
+
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
-import javax.swing.AbstractAction;
-import javax.swing.JFrame;
-import java.awt.BorderLayout;
 
 public class Main {
 
@@ -27,6 +27,11 @@ public class Main {
         // loading .ini file from /resources (no clue how it knows where or which file but works)
         Configuration.INSTANCE.load(this);
         initGUI();
+
+        // this is straight from examples
+        HOSAMonitor.addListener(SDKToolkit.LOGGER);
+        FWproxy framework = new FWproxy(Configuration.INSTANCE);
+
     }
 
     /* This should be moved to GUI class
@@ -45,11 +50,15 @@ public class Main {
         System.out.println("Starting SmartHouse service");
         isStarted = true;
         gui.updateState();
+
+        feature.start();
     }
     public void stop(){
         System.out.println("Stopping SmartHouse service");
         isStarted = false;
         gui.updateState();
+
+        feature.stop();
     }
 
     public void triggerAC(){
