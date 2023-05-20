@@ -31,6 +31,7 @@ public class Main {
         // this is straight from examples
         HOSAMonitor.addListener(SDKToolkit.LOGGER);
         FWproxy framework = new FWproxy(Configuration.INSTANCE);
+        feature = new Feature(framework);
 
     }
 
@@ -51,7 +52,11 @@ public class Main {
         isStarted = true;
         gui.updateState();
 
-        feature.start();
+        try {
+            feature.start();
+        } catch (RuntimeException e) {
+            System.err.println(SDKToolkit.OBJECTWRITER.print(e));
+        }
     }
     public void stop(){
         System.out.println("Stopping SmartHouse service");
