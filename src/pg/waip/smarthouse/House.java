@@ -5,6 +5,7 @@ import com.ericsson.hosasdk.api.fw.P_UNKNOWN_SERVICE_TYPE;
 import com.ericsson.hosasdk.api.hui.IpAppHosaUIManager;
 import com.ericsson.hosasdk.api.hui.IpAppHosaUIManagerAdapter;
 import com.ericsson.hosasdk.api.hui.IpHosaUIManager;
+import com.ericsson.hosasdk.api.mm.*;
 import com.ericsson.hosasdk.api.mm.ul.IpAppUserLocation;
 import com.ericsson.hosasdk.api.mm.ul.IpAppUserLocationAdapter;
 import com.ericsson.hosasdk.api.mm.ul.IpUserLocation;
@@ -59,7 +60,7 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
         /**
          * init location service
          */
-        locService = new LocationTracker(feature, framework);
+        locService = new LocationTracker(feature, framework, this);
 
         System.out.println("\nFinished starting SmartHouse application.\n");
     }
@@ -67,6 +68,7 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
         try {
             msgService.destroyNotification(msgServiceAssignmentId);
         } finally {
+            locService.dispose();
             this.dispose();
         }
     }
@@ -75,9 +77,15 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
         TpAddress originNumber = uiInfo.OriginatingAddress;
         TpAddress destinationNumber = uiInfo.DestinationAddress;
         System.out.println("Received SMS from " + originNumber.AddrString + ": " + uiInfo.DataString);
-        /**
-        * parse command and act accordingly
-        * */
+
+        String content = uiInfo.DataString;
+        if(content.indexOf(" ") != -1) {
+            String cmd = content.substring(0, content.indexOf(" "));
+            String args = content.substring(content.indexOf(" ")+1);
+            parseCommand(originNumber.AddrString, cmd, args);
+        } else {
+            parseCommand(originNumber.AddrString, content, "");
+        }
         // debug/test call for sendSMS
 //        sendSMS(destinationNumber, originNumber, "Witty test reply.");
 //        notifySMS("Witty notification");
@@ -85,7 +93,20 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
         return null;
     }
 
-    private void parseCommand(){}
+    private void parseCommand(String sender, String cmd, String args){
+        System.out.println("Parsing command: " + cmd + " : " + args);
+        if (cmd.equals("")) {
+            System.out.println("Empty command string.");
+            return;
+        }
+        if (cmd.equals(Configuration.INSTANCE.getProperty("house.code.distance"))){
+            System.out.println("Location command found");
+            locService.distance(sender);
+        }
+        /**
+         * add a loop over all controllers once they are set up
+         */
+    }
 
     private void sendSMS(TpAddress originAddress, TpAddress destinationAddress, String content){
         System.out.println("Sending SMS to " + destinationAddress.AddrString + ": " + content);
@@ -125,17 +146,32 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
         sendSMS(originAddress, destinationAddress, content);
     }
 
+    private void sendDistance(String destAddr, float distance){
+        replySMS(destAddr, "Distance to home: " + distance + " km.");
+    }
+
+    public void triggerAC(){}
+    public void triggerWM(){}
+
     /**
      * Location service class separate cause it's all so confusing
      */
     private class LocationTracker extends IpAppUserLocationAdapter implements IpAppUserLocation {
         private Feature feature;
         private FWproxy framework;
+        private House house;
         private IpUserLocation locService;
 
-        public LocationTracker(Feature f, FWproxy fw){
+        private float latitude;
+        private float longitude;
+
+        public LocationTracker(Feature f, FWproxy fw, House h){
             feature = f;
             framework = fw;
+            house = h;
+
+            latitude = Float.parseFloat(Configuration.INSTANCE.getProperty("house.latitude"));
+            longitude = Float.parseFloat(Configuration.INSTANCE.getProperty("house.longitude"));
 
             System.out.println("Trying to obtain User Location service");
             try {
@@ -143,6 +179,47 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
             } catch (P_UNKNOWN_SERVICE_TYPE e){
                 System.err.println("Service not found: " + e);
             }
+        }
+
+        public void distance(String number){
+            System.out.println("Sending location request for number: " + number);
+            TpAddress user = SDKToolkit.createTpAddress(number);
+            TpAddress[] users = new TpAddress[] { user };
+            TpLocationRequest request = new TpLocationRequest(100f, new TpLocationResponseTime(
+                    TpLocationResponseIndicator.P_M_NO_DELAY, -1), false,
+                    TpLocationType.P_M_CURRENT, TpLocationPriority.P_M_NORMAL,
+            "NETWORK");
+
+            locService.extendedLocationReportReq(this, users, request);
+        }
+
+        public void extendedLocationReportRes(int assignmentId, TpUserLocationExtended[] reports){
+            for(int i = 0; i < reports.length; i++){
+                if(reports[i].StatusCode == TpMobilityError.P_M_OK){
+                    System.out.println("Calculating distance for number: " + reports[i].UserID.AddrString);
+                    float lat = reports[i].Locations[0].GeographicalPosition.Latitude;
+                    float lon = reports[i].Locations[0].GeographicalPosition.Longitude;
+
+                    float radius = 6371e3F;
+                    float dLat = (float) Math.toRadians(lat - latitude);
+                    float dLon = (float) Math.toRadians(lon - longitude);
+
+                    float a = (float) (Math.sin(dLat/2) * Math.sin(dLat/2) +
+                            Math.cos(Math.toRadians(lat)) * Math.cos(Math.toRadians(latitude)) *
+                            Math.sin(dLon/2) * Math.sin(dLon/2));
+
+                    float c = (float) (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+
+                    float distance = radius * c;
+                    house.sendDistance(reports[i].UserID.AddrString, distance/1000);
+                }
+            }
+        }
+
+        public void extendedLocationReportErr(int assignmentId, TpMobilityError cause, TpMobilityDiagnostic diagnostic){
+            System.out.println("Error reported by extendedLocationReportErr:");
+            System.out.println("  Cause = " + SDKToolkit.OBJECTWRITER.print(cause));
+            System.out.println("  Diagnostic = " + SDKToolkit.OBJECTWRITER.print(diagnostic));
         }
 
     }
