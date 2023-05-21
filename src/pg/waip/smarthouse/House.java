@@ -7,6 +7,7 @@ import com.ericsson.hosasdk.api.hui.IpAppHosaUIManagerAdapter;
 import com.ericsson.hosasdk.api.hui.IpHosaUIManager;
 import com.ericsson.hosasdk.api.mm.ul.IpAppUserLocation;
 import com.ericsson.hosasdk.api.mm.ul.IpAppUserLocationAdapter;
+import com.ericsson.hosasdk.api.mm.ul.IpUserLocation;
 import com.ericsson.hosasdk.api.ui.IpAppUI;
 import com.ericsson.hosasdk.api.ui.TpUIEventCriteria;
 import com.ericsson.hosasdk.api.ui.TpUIEventInfo;
@@ -26,10 +27,15 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
     private FWproxy framework;
     private LocationTracker locService;
 
+    private String serviceNumber;
+    private String ownerNumber;
+
     public House(Feature f, FWproxy fw){
         feature = f;
         framework = fw;
 
+        serviceNumber = Configuration.INSTANCE.getProperty("service.number");
+        ownerNumber = Configuration.INSTANCE.getProperty("house.owner");
         /**
          * spawn all controllers
          */
@@ -43,7 +49,7 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
             System.err.println("Service not found: " + e);
         }
         TpAddressRange origin = SDKToolkit.createTpAddressRange("*");
-        TpAddressRange destination = SDKToolkit.createTpAddressRange(Configuration.INSTANCE.getProperty("service.number"));
+        TpAddressRange destination = SDKToolkit.createTpAddressRange(serviceNumber);
 
         String serviceCode = "00";
         TpUIEventCriteria criteria = new TpUIEventCriteria(origin, destination, serviceCode);
@@ -53,6 +59,9 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
         /**
          * init location service
          */
+        locService = new LocationTracker(feature, framework);
+
+        System.out.println("\nFinished starting SmartHouse application.\n");
     }
     public void stop(){
         try {
@@ -70,7 +79,9 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
         * parse command and act accordingly
         * */
         // debug/test call for sendSMS
-        sendSMS(destinationNumber, originNumber, "Witty test reply.");
+//        sendSMS(destinationNumber, originNumber, "Witty test reply.");
+//        notifySMS("Witty notification");
+//        replySMS(originNumber.AddrString, "Witty reply");
         return null;
     }
 
@@ -101,13 +112,38 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
                 response, delivNotif, delivTime, validTime);
     }
 
-    public void replySMS(){}
-    public void notifySMS(){}
+    public void replySMS(String destAddr, String content){
+        TpAddress destinationAddress = SDKToolkit.createTpAddress(destAddr);
+        TpAddress originAddress = SDKToolkit.createTpAddress(serviceNumber);
+
+        sendSMS(originAddress, destinationAddress, content);
+    }
+    public void notifySMS(String content){
+        TpAddress destinationAddress = SDKToolkit.createTpAddress(ownerNumber);
+        TpAddress originAddress = SDKToolkit.createTpAddress(serviceNumber);
+
+        sendSMS(originAddress, destinationAddress, content);
+    }
 
     /**
      * Location service class separate cause it's all so confusing
      */
     private class LocationTracker extends IpAppUserLocationAdapter implements IpAppUserLocation {
+        private Feature feature;
+        private FWproxy framework;
+        private IpUserLocation locService;
+
+        public LocationTracker(Feature f, FWproxy fw){
+            feature = f;
+            framework = fw;
+
+            System.out.println("Trying to obtain User Location service");
+            try {
+                locService = (IpUserLocation) framework.obtainSCF(IpUserLocation.class, "P_USER_LOCATION");
+            } catch (P_UNKNOWN_SERVICE_TYPE e){
+                System.err.println("Service not found: " + e);
+            }
+        }
 
     }
 
