@@ -15,6 +15,9 @@ import com.ericsson.hosasdk.api.ui.TpUIEventInfo;
 import com.ericsson.hosasdk.api.ui.TpUIIdentifier;
 import com.ericsson.hosasdk.utility.framework.FWproxy;
 import com.ericsson.nrgsdk.examples.tools.SDKToolkit;
+import pg.waip.smarthouse.controllers.*;
+
+import java.util.HashMap;
 
 /**
  * this whole project from this point on is "Here be dragons"
@@ -31,15 +34,19 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
     private String serviceNumber;
     private String ownerNumber;
 
+    private HashMap controllers;
+
     public House(Feature f, FWproxy fw){
         feature = f;
         framework = fw;
 
         serviceNumber = Configuration.INSTANCE.getProperty("service.number");
         ownerNumber = Configuration.INSTANCE.getProperty("house.owner");
-        /**
-         * spawn all controllers
-         */
+
+        /* spawn all controllers */
+        controllers = new HashMap();
+        spawnControllers();
+
     }
 
     public void start(){
@@ -73,6 +80,38 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
         }
     }
 
+    private void spawnControllers(){
+        // Alarm
+        AlarmController ac = new AlarmController();
+        ac.setHouse(this);
+        controllers.put(ac.getId(), ac);
+
+        // AC
+        AcController acc = new AcController();
+        acc.setHouse(this);
+        controllers.put(acc.getId(), acc);
+
+        // Gate
+        GateController gc = new GateController();
+        gc.setHouse(this);
+        controllers.put(gc.getId(), gc);
+
+        // Lights
+        LightsController lc = new LightsController();
+        lc.setHouse(this);
+        controllers.put(lc.getId(), lc);
+
+        // Shutters
+        ShuttersController sc = new ShuttersController();
+        sc.setHouse(this);
+        controllers.put(sc.getId(), sc);
+
+        // WM
+        WmController wmc = new WmController();
+        wmc.setHouse(this);
+        controllers.put(wmc.getId(), wmc);
+    }
+
     public IpAppUI reportNotification(TpUIIdentifier uiIdentifier, TpUIEventInfo uiInfo, int i){
         TpAddress originNumber = uiInfo.OriginatingAddress;
         TpAddress destinationNumber = uiInfo.DestinationAddress;
@@ -102,10 +141,15 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
         if (cmd.equals(Configuration.INSTANCE.getProperty("house.code.distance"))){
             System.out.println("Location command found");
             locService.distance(sender);
+            return;
         }
-        /**
-         * add a loop over all controllers once they are set up
-         */
+
+        Thing t;
+        if ((t = (Thing) controllers.get(cmd)) != null){
+            t.action(args, sender);
+        } else {
+            replySMS(sender, "Unknown command: " + cmd);
+        }
     }
 
     private void sendSMS(TpAddress originAddress, TpAddress destinationAddress, String content){
@@ -150,8 +194,17 @@ public class House extends IpAppHosaUIManagerAdapter implements IpAppHosaUIManag
         replySMS(destAddr, "Distance to home: " + distance + " km.");
     }
 
-    public void triggerAC(){}
-    public void triggerWM(){}
+    public void triggerAC(){
+        String id = Configuration.INSTANCE.getProperty("house.code.controller.ac");
+        AcController ac = (AcController) controllers.get(id);
+        ac.toggleHumidity();
+        ac.action("", "");
+    }
+    public void triggerWM(){
+        String id = Configuration.INSTANCE.getProperty("house.code.controller.wm");
+        WmController wm = (WmController) controllers.get(id);
+        wm.action("", "");
+    }
 
     /**
      * Location service class separate cause it's all so confusing

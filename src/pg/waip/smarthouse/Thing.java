@@ -1,11 +1,19 @@
 package pg.waip.smarthouse;
 
-public class Thing {
-    public String id;
+public abstract class Thing {
+    protected String id;
     public String name;
 
-    /* senderData will have different type, just here for time being*/
-    public void action(String command, String senderData){
+    protected House house;
 
+
+    public abstract void action(String command, String senderData);
+
+    public String getId(){
+        return id;
+    }
+
+    public void setHouse(House h){
+        house = h;
     }
 }

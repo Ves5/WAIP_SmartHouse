@@ -29,7 +29,7 @@ public class Main {
         initGUI();
 
         // this is straight from examples
-        HOSAMonitor.addListener(SDKToolkit.LOGGER);
+//        HOSAMonitor.addListener(SDKToolkit.LOGGER);
         FWproxy framework = new FWproxy(Configuration.INSTANCE);
         feature = new Feature(framework);
 
@@ -68,9 +68,11 @@ public class Main {
 
     public void triggerAC(){
         System.out.println("Triggered AC prompt");
+        feature.triggerAC();
     }
 
     public void triggerWM(){
         System.out.println("Triggered WashingMachine prompt");
+        feature.triggerWM();
     }
 }

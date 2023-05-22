@@ -17,4 +17,11 @@ public class Feature {
     public void stop(){
         house.stop();
     }
+
+    public void triggerAC(){
+        house.triggerAC();
+    }
+    public void triggerWM() {
+        house.triggerWM();
+    }
 }

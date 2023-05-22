@@ -22,7 +22,10 @@ public class GUI extends JFrame {
         // set up content
         JPanel textPanel = new JPanel();
         textPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
-        mText = new JLabel(Configuration.INSTANCE.getProperty("app.description"));
+        mText = new JLabel("<html>"+Configuration.INSTANCE.getProperty("app.description")
+                + "<br>Requires one phone to have "
+                + Configuration.INSTANCE.getProperty("house.owner")
+                + " number (or changing app configuration)</html>");
         textPanel.add(mText);
         textPanel.setBorder(new EmptyBorder(8,8,8,8));
 
@@ -30,7 +33,7 @@ public class GUI extends JFrame {
         content.add(textPanel, BorderLayout.CENTER);
         /* buttons */
         initButtons();
-//        updateState();
+
         pack();
         setLocation(100, 100);
 //        setSize(200, 100);
